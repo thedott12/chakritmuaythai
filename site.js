@@ -7,6 +7,51 @@ const language = document.querySelector('[data-language]');
 const desktop = window.matchMedia('(min-width: 85rem)');
 const nativePopover = typeof menu.showPopover === 'function';
 
+function typeHeroTitle() {
+  const motion = matchMedia('(prefers-reduced-motion: no-preference)');
+  if (!motion.matches || !window.CSS?.highlights || !window.Intl?.Segmenter ||
+      matchMedia('(forced-colors: active)').matches) return;
+
+  const title = document.querySelector('.hero__title');
+  const badge = title.querySelector('.hero__highlight');
+  const segmenter = new Intl.Segmenter(document.documentElement.lang, { granularity: 'grapheme' });
+  const letters = [];
+  const walker = document.createTreeWalker(title, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (!node.data.trim()) continue;
+    for (const { index, segment } of segmenter.segment(node.data)) {
+      letters.push({ node, end: index + segment.length });
+    }
+  }
+  if (!letters.length) return;
+
+  // Mask only the untyped text. The original heading keeps its shaping, layout and accessible name.
+  const pending = document.createRange();
+  pending.selectNodeContents(title);
+  CSS.highlights.set('hero-untyped', new Highlight(pending));
+  badge.classList.add('awaiting-type');
+  const badgeStart = letters.findIndex(letter => badge.contains(letter.node));
+  const letterInterval = 56;
+  const start = performance.now();
+
+  function reveal() {
+    const index = Math.floor((performance.now() - start) / letterInterval);
+    if (!motion.matches || index >= letters.length - 1) {
+      CSS.highlights.delete('hero-untyped');
+      badge.classList.remove('awaiting-type');
+      return;
+    }
+    const { node, end } = letters[index];
+    pending.setStart(node, end);
+    if (index >= badgeStart) badge.classList.remove('awaiting-type');
+    setTimeout(reveal, letterInterval);
+  }
+  reveal();
+}
+
+typeHeroTitle();
+
 function closeMenu() {
   if (nativePopover && menu.hasAttribute('popover')) {
     menu.hidePopover();

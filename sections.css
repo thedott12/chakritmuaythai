@@ -212,11 +212,8 @@
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
-  .hero__opening, .hero__closing {
-    animation: arrive 520ms var(--ease-out) backwards;
-  }
-
-  .hero__closing { animation-delay: 70ms; }
+  ::highlight(hero-untyped) { color: transparent; }
+  .hero__highlight.awaiting-type { background-color: transparent; }
 
   .button__arrow, .language summary img {
     transition: transform 220ms var(--ease-out);
